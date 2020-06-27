@@ -1,5 +1,7 @@
+import copy
 import random
 from typing import List, Dict
+import matplotlib.pyplot as plt
 
 from haversine import haversine
 
@@ -77,6 +79,9 @@ class Individual:
         self.__distance = NO_INITIALISED_FLOAT
         self.__fitness = NO_INITIALISED_FLOAT
 
+    def copy(self):
+        return copy.deepcopy(self)
+
     @property
     def distance(self):
         if self.__distance == NO_INITIALISED_FLOAT:
@@ -121,7 +126,7 @@ class Individual:
                 current_vehicle_index += 1
                 try:
                     vehicle = Individual.get_vehicle(
-                        current_vehicle_index, Config.vehicles
+                        current_vehicle_index, CONFIG.vehicles
                     )
                 except InvalidVehiclesError:
                     return None
@@ -134,8 +139,8 @@ class Individual:
 
     @staticmethod
     def append_base_city(vehicle: Vehicle):
-        vehicle.route.insert(0, Config.base_city)
-        vehicle.route.append(Config.base_city)
+        vehicle.route.insert(0, CONFIG.base_city)
+        vehicle.route.append(CONFIG.base_city)
 
     @staticmethod
     def get_vehicle(current_vehicle_index: int, vehicles: List[Vehicle]) -> Vehicle:
@@ -170,7 +175,7 @@ class Population:
     def __get_elites(self) -> List[Individual]:
         self.__sort_population_by_fitness()
         elites = []
-        for individual in self.individuals[: Config.number_of_elites]:
+        for individual in self.individuals[: CONFIG.number_of_elites]:
             elites.append(individual.copy())
         return elites
 
@@ -193,7 +198,7 @@ class Population:
         selected = []
         fitness_sum = sum(individual.fitness for individual in self.individuals)
 
-        for _ in range(0, len(self.individuals) - Config.number_of_elites):
+        for _ in range(0, len(self.individuals) - CONFIG.number_of_elites):
             pick = random.uniform(0, fitness_sum)
             current = 0
             for individual in self.individuals:
@@ -229,7 +234,7 @@ class Population:
 
     def mutate_population(self):
         for index in range(len(self.individuals)):
-            if random.random() < Config.mutation_rate:
+            if random.random() < CONFIG.mutation_rate:
                 individual = None
                 while individual is None:
                     keys = self.individuals[index].keys_without_base_city
@@ -241,9 +246,9 @@ class Population:
 
 def create_first_generation():
     individuals = []
-    individuals_to_do = Config.max_population_size
+    individuals_to_do = CONFIG.max_population_size
     while individuals_to_do != 0:
-        sample_keys = random.sample(Config.city_keys, len(Config.city_keys))
+        sample_keys = random.sample(CONFIG.city_keys, len(CONFIG.city_keys))
         individual = Individual.create_form_keys(sample_keys)
         if individual is not None:
             individuals.append(individual)
@@ -254,13 +259,24 @@ def create_first_generation():
 
 class Config:
 
-    def __init__(self,  base_city: City, cities: List[City], vehicles: List[Vehicle] ):
+    def __init__(
+            self,
+            base_city: City,
+            cities: List[City],
+            vehicles: List[Vehicle],
+            max_population_size: int,
+            number_of_elites: int,
+            mutation_rate: float
+    ):
         self.base_city = base_city
         self.cities = cities
         self.__vehicles = vehicles
         self.city_dictionary = {}
         self.city_keys = []
         self.create_city_dict_and_city_keys()
+        self.max_population_size = max_population_size
+        self.number_of_elites = number_of_elites
+        self.mutation_rate = mutation_rate
 
     def create_city_dict_and_city_keys(self):
         self.city_dictionary: Dict[str, City] = {self.base_city.name: self.base_city}
@@ -272,46 +288,29 @@ class Config:
 
     @property
     def vehicles(self):
-        self.__vehicles.
+        return self.__vehicles
 
 
-
-def run_vrp(config: Config):
+def run_vrp(config: Config, number_of_generations: int):
+    global CONFIG
     CONFIG = config
+    first_generation = create_first_generation()
+    generations = [first_generation]
+    for i in range(2, number_of_generations + 1):
+        generation = generations[-1].next_generation()
+        print(f"best distance of generation {i} is {generation.best_individual.distance}")
+        generations.append(generation)
+
+    last_generation = generations[-1]
+    print_information(last_generation.best_individual)
+
+    distance = [a.best_individual.distance for a in generations]
+    plt.plot(distance)
+    plt.ylabel('distance')
+    plt.xlabel('generations')
+    plt.savefig("graph.png")
 
     print("end")
-# def run_vrp(
-#         base_city: City,
-#         cities: List[City],
-#         vehicles: List[Vehicle],
-#         max_population_size: int,
-#         number_of_generations: int,
-#         number_of_elites: int,
-#         mutation_rate: float,
-# ):
-#     Config.base_city = base_city
-#     Config.mutation_rate = mutation_rate
-#     Config.number_of_elites = number_of_elites
-#     Config.create_city_dict(base_city, cities)
-#     Config.vehicles = vehicles
-#     Config.max_population_size = max_population_size
-#
-#     first_generation = create_first_generation()
-#     generations = [first_generation]
-#     for i in range(2, number_of_generations + 1):
-#         generation = generations[-1].next_generation()
-#         generations.append(generation)
-#
-#     last_generation = generations[-1]
-#     print_information(last_generation.best_individual)
-#
-#     distance = [a.best_individual.distance for a in generations]
-#     plt.plot(distance)
-#     plt.ylabel('distance')
-#     plt.xlabel('generations')
-#     plt.savefig("graph.png")
-#
-#     print("end")
 
 
 def print_information(individual: Individual):

@@ -49,17 +49,11 @@ vehicles: List[Vehicle] = [
 
 config = Config(
     base_city=base_city,
-
+    cities=cities,
+    vehicles=vehicles,
+    max_population_size=100,
+    number_of_elites=10,
+    mutation_rate=0.1
 )
 
-# run_vrp(
-#     base_city=base_city,
-#     cities=cities,
-#     vehicles=vehicles,
-#     max_population_size=100,
-#     number_of_generations=5000,
-#     number_of_elites=10,
-#     mutation_rate=0.1,
-# )
-
-
+run_vrp(config, number_of_generations=1000)
